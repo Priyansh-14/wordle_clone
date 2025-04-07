@@ -3,9 +3,17 @@ import React from "react";
 const Keyboard = ({ keyboardStatus, onKeyPress, isEnterEnabled }) => {
   const row1 = "QWERTYUIOP".split("");
   const row2 = "ASDFGHJKL".split("");
-  const row3 = ["Enter", ..."ZXCVBNM".split(""), "Backspace"];
+  const row3 = "ZXCVBNM".split("");
+  const row4 = ["Enter", "Backspace"];
 
-  const getBgColor = (status) => {
+  // For special keys, use custom colors; otherwise use the default status-based colors
+  const getBgColor = (key, status) => {
+    if (key === "Enter") {
+      return "bg-blue-500 text-white";
+    }
+    if (key === "Backspace") {
+      return "bg-red-500 text-white";
+    }
     switch (status) {
       case "correct":
         return "bg-green-500 text-white";
@@ -19,18 +27,23 @@ const Keyboard = ({ keyboardStatus, onKeyPress, isEnterEnabled }) => {
   };
 
   const renderKey = (key) => {
-    let extraClasses = "cursor-pointer hover:opacity-90 transition-opacity";
-    if (key === "Enter") {
-      extraClasses += isEnterEnabled ? "" : " opacity-50 cursor-not-allowed";
-    }
+    const disabled = key === "Enter" && !isEnterEnabled;
+    const isSpecial = key === "Enter" || key === "Backspace";
     return (
       <button
         key={key}
         onClick={() => onKeyPress(key)}
-        disabled={key === "Enter" && !isEnterEnabled}
-        className={`px-3 py-2 rounded text-sm font-bold min-w-[2rem] ${getBgColor(
-          keyboardStatus[key] || ""
-        )} ${extraClasses}`}
+        disabled={disabled}
+        className={`
+          flex items-center justify-center rounded font-bold transition-opacity
+          ${getBgColor(key, keyboardStatus[key] || "")}
+          ${disabled ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}
+          ${
+            isSpecial
+              ? "w-12 h-12 text-base sm:w-14 sm:h-14 sm:text-lg md:w-16 md:h-16 md:text-xl"
+              : "w-8 h-8 text-xs sm:w-10 sm:h-10 sm:text-sm md:w-12 md:h-12 md:text-base lg:w-14 lg:h-14 lg:text-lg"
+          }
+        `}
       >
         {key === "Backspace" ? "⌫" : key}
       </button>
@@ -38,10 +51,21 @@ const Keyboard = ({ keyboardStatus, onKeyPress, isEnterEnabled }) => {
   };
 
   return (
-    <div className="mt-4 flex flex-col items-center gap-1">
-      <div className="flex justify-center gap-1">{row1.map(renderKey)}</div>
-      <div className="flex justify-center gap-1">{row2.map(renderKey)}</div>
-      <div className="flex justify-center gap-1">{row3.map(renderKey)}</div>
+    <div className="mt-4 w-full overflow-x-auto">
+      <div className="flex flex-col items-center space-y-1">
+        <div className="flex justify-center gap-1 sm:gap-2">
+          {row1.map(renderKey)}
+        </div>
+        <div className="flex justify-center gap-1 sm:gap-2">
+          {row2.map(renderKey)}
+        </div>
+        <div className="flex justify-center gap-1 sm:gap-2">
+          {row3.map(renderKey)}
+        </div>
+        <div className="flex justify-center gap-1 sm:gap-2">
+          {row4.map(renderKey)}
+        </div>
+      </div>
     </div>
   );
 };

@@ -10,7 +10,6 @@ import {
   decodeWord,
 } from "../utils/wordUtils";
 
-// Main Game component manages the overall game state and logic
 const Game = () => {
   // Game settings state
   const [wordLength, setWordLength] = useState(4);
@@ -20,39 +19,36 @@ const Game = () => {
   // Game state variables
   const [wordList, setWordList] = useState({});
   const [targetWord, setTargetWord] = useState("");
-  const [guesses, setGuesses] = useState([]); // Each guess: { word, feedback }
+  const [guesses, setGuesses] = useState([]);
   const [currentGuess, setCurrentGuess] = useState("");
   const [error, setError] = useState("");
-  const [keyboardStatus, setKeyboardStatus] = useState({}); // Mapping letter -> status ('correct', 'present', 'absent')
+  const [keyboardStatus, setKeyboardStatus] = useState({});
   const [gameOver, setGameOver] = useState(false);
 
-  // New state for sharing features
+  // Sharing features
   const [shareCode, setShareCode] = useState("");
   const [isSharedGame, setIsSharedGame] = useState(false);
 
-  // Load words from the local words.json file on component mount
+  // Load words from local words.json on mount
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}words.json`)
       .then((res) => res.json())
       .then((data) => {
         setWordList(data);
-        // Start a new game once the word list is loaded
         startNewGame(data, wordLength);
       })
       .catch((err) => console.error("Error loading words:", err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Wrap startNewGame with useCallback so it is stable between renders
+  // Start or restart the game
   const startNewGame = useCallback(
     (words, length) => {
-      // Only start a random game if not in shared game mode.
       if (!isSharedGame) {
-        // Filter valid words by the selected length
+        // Filter valid words by selected length
         const validWords = Object.keys(words).filter(
-          (word) => word.length === length
+          (w) => w.length === length
         );
-        // Randomly select a target word from the valid words
         const newTarget = getRandomWord(validWords);
         setTargetWord(newTarget);
       }
@@ -65,7 +61,7 @@ const Game = () => {
     [isSharedGame]
   );
 
-  // Reset the game when settings change (but only if not in shared mode)
+  // Reset the game if settings change (unless we are in a shared game)
   useEffect(() => {
     if (Object.keys(wordList).length > 0 && !isSharedGame) {
       startNewGame(wordList, wordLength);
@@ -79,10 +75,11 @@ const Game = () => {
     isSharedGame,
   ]);
 
-  // Function to handle key presses from the on-screen keyboard
+  // Handle on-screen keyboard input
   const handleKeyPress = (key) => {
     if (gameOver) return;
     setError("");
+
     if (key === "Enter") {
       if (currentGuess.length === wordLength) {
         submitGuess();
@@ -90,14 +87,13 @@ const Game = () => {
     } else if (key === "Backspace") {
       setCurrentGuess((prev) => prev.slice(0, -1));
     } else {
-      // Append letter if current guess is not full
       if (currentGuess.length < wordLength) {
         setCurrentGuess((prev) => prev + key.toLowerCase());
       }
     }
   };
 
-  // Function to submit the current guess (called on Enter key press)
+  // Submit the current guess
   const submitGuess = () => {
     if (currentGuess.length !== wordLength) {
       setError(`Guess must be ${wordLength} letters long.`);
@@ -107,17 +103,16 @@ const Game = () => {
       setError("Not a valid word.");
       return;
     }
-    // Get feedback for the guess (correct, present, absent)
+
     const feedback = getFeedback(currentGuess, targetWord);
-    // Update the on‑screen keyboard based on feedback
     updateKeyboardStatus(currentGuess, feedback);
-    // Add the new guess to the guesses array
+
     const newGuess = { word: currentGuess, feedback };
     const newGuesses = [...guesses, newGuess];
     setGuesses(newGuesses);
     setCurrentGuess("");
 
-    // Check if the guess matches the target word or if the max attempts are reached
+    // Check if correct or out of attempts
     if (currentGuess === targetWord) {
       setGameOver(true);
     } else if (!infiniteMode && newGuesses.length >= maxAttempts) {
@@ -125,13 +120,13 @@ const Game = () => {
     }
   };
 
-  // Update the keyboard status mapping based on the feedback of the current guess
+  // Update keyboard letters based on feedback
   const updateKeyboardStatus = (guess, feedback) => {
     const newStatus = { ...keyboardStatus };
     for (let i = 0; i < guess.length; i++) {
       const letter = guess[i].toUpperCase();
       const status = feedback[i];
-      // Priority: 'correct' > 'present' > 'absent'
+      // Priority: correct > present > absent
       if (newStatus[letter] === "correct") continue;
       if (newStatus[letter] === "present" && status === "absent") continue;
       newStatus[letter] = status;
@@ -139,17 +134,16 @@ const Game = () => {
     setKeyboardStatus(newStatus);
   };
 
-  // Generate and display a shareable code for the target word (encoded with Base64)
+  // Generate a share code
   const handleShare = () => {
     const encoded = encodeWord(targetWord);
     alert(`Share this code with your friends: ${encoded}`);
   };
 
-  // Handle loading a shared word from the provided share code
+  // Load a shared word from a code
   const handleLoadShare = () => {
     const decoded = decodeWord(shareCode);
     if (decoded) {
-      // Optionally update the word length to match the shared word
       setWordLength(decoded.length);
       setTargetWord(decoded);
       setGuesses([]);
@@ -164,18 +158,19 @@ const Game = () => {
     setShareCode("");
   };
 
-  // Function to start a new game that cancels shared mode
+  // Cancel shared mode and start fresh
   const handleNewGame = () => {
     setIsSharedGame(false);
     startNewGame(wordList, wordLength);
   };
 
   return (
-    <div className="max-w-sm w-full bg-white rounded-xl shadow-lg p-6">
+    <div className="w-full bg-white rounded-xl shadow-lg p-4 sm:p-6">
       <h1 className="text-3xl font-extrabold text-center mb-6 text-gray-800">
         Wordle-like Game
       </h1>
 
+      {/* Settings */}
       <Settings
         wordLength={wordLength}
         setWordLength={setWordLength}
@@ -185,12 +180,13 @@ const Game = () => {
         setInfiniteMode={setInfiniteMode}
       />
 
-      <div className="flex items-center gap-2 mb-4">
+      {/* Share code input */}
+      <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
         <input
           type="text"
           value={shareCode}
           onChange={(e) => setShareCode(e.target.value)}
-          className="border border-gray-300 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="border border-gray-300 p-2 rounded w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-purple-400"
           placeholder="Enter share code"
         />
         <button
@@ -201,6 +197,7 @@ const Game = () => {
         </button>
       </div>
 
+      {/* Game Grid */}
       <Grid
         guesses={guesses}
         wordLength={wordLength}
@@ -209,10 +206,12 @@ const Game = () => {
         gameOver={gameOver}
       />
 
+      {/* Error Message */}
       {error && (
         <p className="text-red-500 text-center mb-2 font-medium">{error}</p>
       )}
 
+      {/* Win / Loss Message */}
       {gameOver && (
         <div className="text-center my-4">
           {guesses[guesses.length - 1]?.word === targetWord ? (
@@ -227,6 +226,7 @@ const Game = () => {
         </div>
       )}
 
+      {/* Share & New Game Buttons */}
       <div className="flex justify-center gap-3 mb-4">
         <button
           onClick={handleShare}
@@ -242,6 +242,7 @@ const Game = () => {
         </button>
       </div>
 
+      {/* On-screen keyboard */}
       <Keyboard
         keyboardStatus={keyboardStatus}
         onKeyPress={handleKeyPress}
