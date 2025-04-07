@@ -8,13 +8,32 @@ const Settings = ({
   infiniteMode,
   setInfiniteMode,
 }) => {
+  // Minimum values for the fields
+  const MIN_WORD_LENGTH = 3;
+  const MAX_WORD_LENGTH = 31;
+  const MIN_MAX_ATTEMPTS = 1;
+
+  // Handle changes to the word length input
   const handleWordLengthChange = (e) => {
-    const length = parseInt(e.target.value, 10);
+    const value = e.target.value;
+    let length = parseInt(value, 10);
+    // If the field is empty or the value is less than the min, default to the minimum
+    if (!value || isNaN(length) || length < MIN_WORD_LENGTH) {
+      length = MIN_WORD_LENGTH;
+    } else if (length > MAX_WORD_LENGTH) {
+      length = MAX_WORD_LENGTH;
+    }
     setWordLength(length);
   };
 
+  // Handle changes to the max attempts input
   const handleMaxAttemptsChange = (e) => {
-    const attempts = parseInt(e.target.value, 10);
+    const value = e.target.value;
+    let attempts = parseInt(value, 10);
+    // If the field is empty or the value is less than the min, default to the minimum
+    if (!value || isNaN(attempts) || attempts < MIN_MAX_ATTEMPTS) {
+      attempts = MIN_MAX_ATTEMPTS;
+    }
     setMaxAttempts(attempts);
   };
 
@@ -32,8 +51,8 @@ const Settings = ({
             type="number"
             value={wordLength}
             onChange={handleWordLengthChange}
-            min="3"
-            max="10"
+            min={MIN_WORD_LENGTH}
+            max={MAX_WORD_LENGTH}
             className="border border-gray-300 rounded p-1 w-16 text-center focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
         </label>
@@ -43,7 +62,7 @@ const Settings = ({
             type="number"
             value={maxAttempts}
             onChange={handleMaxAttemptsChange}
-            min="1"
+            min={MIN_MAX_ATTEMPTS}
             max="10"
             disabled={infiniteMode}
             className="border border-gray-300 rounded p-1 w-16 text-center focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50"

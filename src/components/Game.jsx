@@ -213,6 +213,20 @@ const Game = () => {
         <p className="text-red-500 text-center mb-2 font-medium">{error}</p>
       )}
 
+      {gameOver && (
+        <div className="text-center my-4">
+          {guesses[guesses.length - 1]?.word === targetWord ? (
+            <p className="text-green-600 font-bold">
+              Congratulations! You've guessed the word!
+            </p>
+          ) : (
+            <p className="text-red-600 font-bold">
+              Game Over! The word was: {targetWord.toUpperCase()}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="flex justify-center gap-3 mb-4">
         <button
           onClick={handleShare}
