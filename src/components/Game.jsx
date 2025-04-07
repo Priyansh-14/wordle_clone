@@ -32,7 +32,7 @@ const Game = () => {
 
   // Load words from the local words.json file on component mount
   useEffect(() => {
-    fetch("/words.json")
+    fetch(`${import.meta.env.BASE_URL}words.json`)
       .then((res) => res.json())
       .then((data) => {
         setWordList(data);
