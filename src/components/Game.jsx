@@ -13,8 +13,8 @@ import {
 // Main Game component manages the overall game state and logic
 const Game = () => {
   // Game settings state
-  const [wordLength, setWordLength] = useState(5);
-  const [maxAttempts, setMaxAttempts] = useState(6);
+  const [wordLength, setWordLength] = useState(4);
+  const [maxAttempts, setMaxAttempts] = useState(4);
   const [infiniteMode, setInfiniteMode] = useState(false);
 
   // Game state variables
