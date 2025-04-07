@@ -1,18 +1,23 @@
 import React from "react";
 
 const Keyboard = ({ keyboardStatus, onKeyPress, isEnterEnabled }) => {
+  // Three rows of letters
   const row1 = "QWERTYUIOP".split("");
   const row2 = "ASDFGHJKL".split("");
   const row3 = "ZXCVBNM".split("");
+  // Fourth row with special keys
   const row4 = ["Enter", "Backspace"];
 
-  // For special keys, use custom colors; otherwise use the default status-based colors
+  /**
+   * Returns a background + text color for each key.
+   * Enter and Backspace have custom colors. Other keys get feedback-based colors.
+   */
   const getBgColor = (key, status) => {
     if (key === "Enter") {
-      return "bg-blue-500 text-white";
+      return "bg-blue-500 text-white"; // Enter key color
     }
     if (key === "Backspace") {
-      return "bg-red-500 text-white";
+      return "bg-red-500 text-white"; // Backspace key color
     }
     switch (status) {
       case "correct":
@@ -26,6 +31,9 @@ const Keyboard = ({ keyboardStatus, onKeyPress, isEnterEnabled }) => {
     }
   };
 
+  /**
+   * Renders an individual key. Special keys are sized larger.
+   */
   const renderKey = (key) => {
     const disabled = key === "Enter" && !isEnterEnabled;
     const isSpecial = key === "Enter" || key === "Backspace";
@@ -38,10 +46,14 @@ const Keyboard = ({ keyboardStatus, onKeyPress, isEnterEnabled }) => {
           flex items-center justify-center rounded font-bold transition-opacity
           ${getBgColor(key, keyboardStatus[key] || "")}
           ${disabled ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}
+
+          /* Different sizing for special keys vs. regular letters */
           ${
             isSpecial
-              ? "w-12 h-12 text-base sm:w-14 sm:h-14 sm:text-lg md:w-16 md:h-16 md:text-xl"
-              : "w-8 h-8 text-xs sm:w-10 sm:h-10 sm:text-sm md:w-12 md:h-12 md:text-base lg:w-14 lg:h-14 lg:text-lg"
+              ? /* Bigger for Enter & Backspace */
+                "w-16 h-10 text-sm sm:w-20 sm:h-12 sm:text-base md:w-24 md:h-14 md:text-lg px-2"
+              : /* Default letter keys */
+                "w-8 h-8 text-xs sm:w-10 sm:h-10 sm:text-sm md:w-12 md:h-12 md:text-base lg:w-14 lg:h-14 lg:text-lg"
           }
         `}
       >
