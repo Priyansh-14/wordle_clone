@@ -2,7 +2,7 @@
   "name": "wordle_clone",
   "private": true,
   "version": "0.0.0",
-  "homepage": "https://Priyansh-14.github.io/wordle-game",
+  "homepage": "https://priyansh-14.github.io/wordle-game",
   "type": "module",
   "scripts": {
     "dev": "vite",
