@@ -269,7 +269,7 @@ const Game = () => {
   return (
     <div className="w-full bg-white rounded-xl shadow-lg p-4 sm:p-6">
       <h1 className="text-3xl font-extrabold text-center mb-6 text-gray-800">
-        Wordle-like Game
+        Wordle
       </h1>
 
       <Settings
