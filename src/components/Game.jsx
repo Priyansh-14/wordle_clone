@@ -30,12 +30,14 @@ const Game = () => {
 
   // Sharing features
   const [shareCode, setShareCode] = useState("");
+  const [generatedShareCode, setGeneratedShareCode] = useState("");
   const [isSharedGame, setIsSharedGame] = useState(false);
 
   // Initialize currentGuess array whenever wordLength changes.
   useEffect(() => {
     setCurrentGuess(Array(wordLength).fill(""));
     setCursorIndex(0);
+    setGeneratedShareCode("");
   }, [wordLength]);
 
   // Load words from words.json on mount.
@@ -66,6 +68,7 @@ const Game = () => {
       setError("");
       setKeyboardStatus({});
       setGameOver(false);
+      setGeneratedShareCode(""); // Clear any previous generated share code.
     },
     [isSharedGame, wordLength]
   );
@@ -109,7 +112,6 @@ const Game = () => {
     } else if (!infiniteMode && newGuesses.length >= maxAttempts) {
       setGameOver(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     currentGuess,
     wordList,
@@ -120,7 +122,7 @@ const Game = () => {
     wordLength,
   ]);
 
-  // Wrap updateKeyboardStatus in useCallback using a functional update.
+  // Wrap updateKeyboardStatus using a functional update.
   const updateKeyboardStatus = useCallback((guess, feedback) => {
     setKeyboardStatus((prevStatus) => {
       let newStatus = { ...prevStatus };
@@ -178,7 +180,7 @@ const Game = () => {
         return;
       }
 
-      // Space: instead of inserting an empty space, insert a dash.
+      // Space: insert a dash instead of an empty space.
       if (key === "Space" || key === " ") {
         const newGuess = [...currentGuess];
         newGuess[cursorIndex] = "-";
@@ -232,9 +234,18 @@ const Game = () => {
     };
   }, [handleKeyPress]);
 
+  // Instead of an alert, generate and display the share code.
   const handleShare = () => {
-    const encoded = encodeWord(targetWord);
-    alert(`Share this code with your friends: ${encoded}`);
+    const code = encodeWord(targetWord);
+    setGeneratedShareCode(code);
+  };
+
+  // State to hold generated share code.
+  // const [generatedShareCode, setGeneratedShareCode] = useState("");
+
+  // Copy the share code to clipboard.
+  const copyShareCode = () => {
+    navigator.clipboard.writeText(generatedShareCode);
   };
 
   const handleLoadShare = () => {
@@ -296,6 +307,23 @@ const Game = () => {
           Load Word
         </button>
       </div>
+
+      {generatedShareCode && (
+        <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
+          <input
+            type="text"
+            value={generatedShareCode}
+            readOnly
+            className="border border-gray-300 p-2 rounded w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-purple-400"
+          />
+          <button
+            onClick={copyShareCode}
+            className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-colors"
+          >
+            Copy
+          </button>
+        </div>
+      )}
 
       <Grid
         guesses={guesses}
