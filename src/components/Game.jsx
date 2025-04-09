@@ -33,7 +33,7 @@ const Game = () => {
   const [generatedShareCode, setGeneratedShareCode] = useState("");
   const [isSharedGame, setIsSharedGame] = useState(false);
 
-  // Initialize currentGuess array whenever wordLength changes.
+  // Whenever the wordLength changes, initialize currentGuess array and clear old share code.
   useEffect(() => {
     setCurrentGuess(Array(wordLength).fill(""));
     setCursorIndex(0);
@@ -50,6 +50,21 @@ const Game = () => {
       })
       .catch((err) => console.error("Error loading words:", err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Define updateKeyboardStatus first so that submitGuess can use it.
+  const updateKeyboardStatus = useCallback((guess, feedback) => {
+    setKeyboardStatus((prevStatus) => {
+      let newStatus = { ...prevStatus };
+      for (let i = 0; i < guess.length; i++) {
+        const letter = guess[i].toUpperCase();
+        const status = feedback[i];
+        if (newStatus[letter] === "correct") continue;
+        if (newStatus[letter] === "present" && status === "absent") continue;
+        newStatus[letter] = status;
+      }
+      return newStatus;
+    });
   }, []);
 
   // Start or restart the game.
@@ -120,22 +135,8 @@ const Game = () => {
     infiniteMode,
     maxAttempts,
     wordLength,
+    updateKeyboardStatus, // Added missing dependency
   ]);
-
-  // Wrap updateKeyboardStatus using a functional update.
-  const updateKeyboardStatus = useCallback((guess, feedback) => {
-    setKeyboardStatus((prevStatus) => {
-      let newStatus = { ...prevStatus };
-      for (let i = 0; i < guess.length; i++) {
-        const letter = guess[i].toUpperCase();
-        const status = feedback[i];
-        if (newStatus[letter] === "correct") continue;
-        if (newStatus[letter] === "present" && status === "absent") continue;
-        newStatus[letter] = status;
-      }
-      return newStatus;
-    });
-  }, []);
 
   // Wrap handleKeyPress in useCallback.
   const handleKeyPress = useCallback(
@@ -234,16 +235,13 @@ const Game = () => {
     };
   }, [handleKeyPress]);
 
-  // Instead of an alert, generate and display the share code.
+  // Generate share code and display it in a copyable field.
   const handleShare = () => {
     const code = encodeWord(targetWord);
     setGeneratedShareCode(code);
   };
 
-  // State to hold generated share code.
-  // const [generatedShareCode, setGeneratedShareCode] = useState("");
-
-  // Copy the share code to clipboard.
+  // Copy the share code to the clipboard.
   const copyShareCode = () => {
     navigator.clipboard.writeText(generatedShareCode);
   };
