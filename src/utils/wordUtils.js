@@ -2,8 +2,15 @@
  * Utility functions for the Wordle-like game.
  */
 
+const TEST_MODE = false;
+const TEST_WORD = "broom";
+
 // Returns a random word from the provided list
 export const getRandomWord = (words) => {
+  if (TEST_MODE) {
+    console.log("Test mode active. Returning test word:", TEST_WORD);
+    return TEST_WORD;
+  }
   if (!words || words.length === 0) return "";
   const randomIndex = Math.floor(Math.random() * words.length);
   console.log("Random word:", words[randomIndex]);

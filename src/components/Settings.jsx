@@ -8,24 +8,32 @@ const Settings = ({
   infiniteMode,
   setInfiniteMode,
 }) => {
-  const MIN_WORD_LENGTH = 3;
-  const MIN_MAX_ATTEMPTS = 1;
-
+  // Handler for word length dropdown change
   const handleWordLengthChange = (e) => {
-    let value = parseInt(e.target.value, 10);
-    if (!value || value < MIN_WORD_LENGTH) value = MIN_WORD_LENGTH;
-    setWordLength(value);
+    setWordLength(parseInt(e.target.value, 10));
   };
 
+  // Handler for max attempts dropdown change
   const handleMaxAttemptsChange = (e) => {
-    let value = parseInt(e.target.value, 10);
-    if (!value || value < MIN_MAX_ATTEMPTS) value = MIN_MAX_ATTEMPTS;
-    setMaxAttempts(value);
+    setMaxAttempts(parseInt(e.target.value, 10));
   };
 
+  // Toggle infinite mode
   const handleInfiniteToggle = () => {
     setInfiniteMode(!infiniteMode);
   };
+
+  // Generate options for word length (3 to 10)
+  const wordLengthOptions = [];
+  for (let i = 3; i <= 10; i++) {
+    wordLengthOptions.push(i);
+  }
+
+  // Generate options for max attempts (1 to 10)
+  const maxAttemptsOptions = [];
+  for (let i = 1; i <= 10; i++) {
+    maxAttemptsOptions.push(i);
+  }
 
   return (
     <div className="mb-4 border border-gray-200 rounded-lg p-3 bg-gray-50 w-full">
@@ -33,26 +41,32 @@ const Settings = ({
       <div className="flex flex-col gap-3">
         <label className="flex items-center justify-between">
           <span className="text-gray-700">Word Length:</span>
-          <input
-            type="number"
+          <select
             value={wordLength}
             onChange={handleWordLengthChange}
-            min={MIN_WORD_LENGTH}
-            max="20"
             className="border border-gray-300 rounded p-1 w-16 text-center focus:outline-none focus:ring-2 focus:ring-blue-300"
-          />
+          >
+            {wordLengthOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="flex items-center justify-between">
           <span className="text-gray-700">Max Attempts:</span>
-          <input
-            type="number"
+          <select
             value={maxAttempts}
             onChange={handleMaxAttemptsChange}
-            min={MIN_MAX_ATTEMPTS}
-            max="20"
             disabled={infiniteMode}
             className="border border-gray-300 rounded p-1 w-16 text-center focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50"
-          />
+          >
+            {maxAttemptsOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="flex items-center gap-2">
           <input
