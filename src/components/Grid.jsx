@@ -1,21 +1,39 @@
 import React from "react";
 
-const Grid = ({ guesses, wordLength, maxAttempts, currentGuess, gameOver }) => {
+const Grid = ({
+  guesses,
+  wordLength,
+  maxAttempts,
+  currentGuess,
+  gameOver,
+  cursorIndex,
+  onCellClick,
+}) => {
+  // Build an array of rows: completed guesses and the current guess row
   const rows = [];
   for (let i = 0; i < maxAttempts; i++) {
     if (i < guesses.length) {
-      // Past guesses
-      rows.push(guesses[i]);
+      rows.push({
+        word: guesses[i].word,
+        feedback: guesses[i].feedback,
+        isCurrent: false,
+      });
     } else if (i === guesses.length && !gameOver) {
-      // Current guess row
-      const rowWord = currentGuess.padEnd(wordLength, "");
-      rows.push({ word: rowWord, feedback: Array(wordLength).fill("") });
+      rows.push({
+        word: currentGuess,
+        feedback: Array(wordLength).fill(""),
+        isCurrent: true,
+      });
     } else {
-      // Empty rows
-      rows.push({ word: "", feedback: Array(wordLength).fill("") });
+      rows.push({
+        word: Array(wordLength).fill(""),
+        feedback: Array(wordLength).fill(""),
+        isCurrent: false,
+      });
     }
   }
 
+  // Determine background color based on feedback status
   const getBgColor = (status) => {
     switch (status) {
       case "correct":
@@ -30,13 +48,8 @@ const Grid = ({ guesses, wordLength, maxAttempts, currentGuess, gameOver }) => {
   };
 
   return (
-    // overflow-x-auto: allows horizontal scrolling if needed
-    <div className="overflow-x-auto w-full mb-4">
-      {/* 
-        A flex container that stacks rows. 
-        We add px-2 for some horizontal padding on smaller screens.
-      */}
-      <div className="px-2 sm:px-0 flex flex-col items-center">
+    <div className="overflow-x-auto w-full">
+      <div className="px-2 sm:px-0 flex flex-col items-center my-4">
         {rows.map((row, rowIndex) => (
           <div
             key={rowIndex}
@@ -47,18 +60,17 @@ const Grid = ({ guesses, wordLength, maxAttempts, currentGuess, gameOver }) => {
                 ? row.word[colIndex].toUpperCase()
                 : "";
               const status = row.feedback[colIndex] || "";
-
+              const isEditable = row.isCurrent && !gameOver;
+              const isSelected = isEditable && cursorIndex === colIndex;
               return (
                 <div
                   key={colIndex}
+                  onClick={() => isEditable && onCellClick(colIndex)}
                   className={`
                     flex items-center justify-center border-2 rounded-md font-bold
                     ${getBgColor(status)}
-                    // Responsive square sizes
-                    w-6 h-6 text-xs
-                    sm:w-8 sm:h-8 sm:text-sm
-                    md:w-10 md:h-10 md:text-base
-                    lg:w-12 lg:h-12 lg:text-lg
+                    ${isSelected ? "ring-2 ring-blue-500" : ""}
+                    w-6 h-6 text-xs sm:w-8 sm:h-8 sm:text-sm md:w-10 md:h-10 md:text-base lg:w-12 lg:h-12 lg:text-lg
                   `}
                 >
                   {letter}

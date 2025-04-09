@@ -11,7 +11,7 @@ import {
 } from "../utils/wordUtils";
 
 const Game = () => {
-  // Game settings state
+  // Game settings
   const [wordLength, setWordLength] = useState(4);
   const [maxAttempts, setMaxAttempts] = useState(4);
   const [infiniteMode, setInfiniteMode] = useState(false);
@@ -19,8 +19,11 @@ const Game = () => {
   // Game state variables
   const [wordList, setWordList] = useState({});
   const [targetWord, setTargetWord] = useState("");
-  const [guesses, setGuesses] = useState([]);
-  const [currentGuess, setCurrentGuess] = useState("");
+  // currentGuess is stored as an array of characters; initially empty.
+  const [currentGuess, setCurrentGuess] = useState([]);
+  // cursorIndex determines which cell is selected for editing.
+  const [cursorIndex, setCursorIndex] = useState(0);
+  const [guesses, setGuesses] = useState([]); // Completed guesses: { word, feedback }
   const [error, setError] = useState("");
   const [keyboardStatus, setKeyboardStatus] = useState({});
   const [gameOver, setGameOver] = useState(false);
@@ -29,7 +32,13 @@ const Game = () => {
   const [shareCode, setShareCode] = useState("");
   const [isSharedGame, setIsSharedGame] = useState(false);
 
-  // Load words from local words.json on mount
+  // Initialize currentGuess array whenever wordLength changes.
+  useEffect(() => {
+    setCurrentGuess(Array(wordLength).fill(""));
+    setCursorIndex(0);
+  }, [wordLength]);
+
+  // Load words from words.json on mount.
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}words.json`)
       .then((res) => res.json())
@@ -41,11 +50,10 @@ const Game = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Start or restart the game
+  // Start or restart the game.
   const startNewGame = useCallback(
     (words, length) => {
       if (!isSharedGame) {
-        // Filter valid words by selected length
         const validWords = Object.keys(words).filter(
           (w) => w.length === length
         );
@@ -53,15 +61,16 @@ const Game = () => {
         setTargetWord(newTarget);
       }
       setGuesses([]);
-      setCurrentGuess("");
+      setCurrentGuess(Array(wordLength).fill(""));
+      setCursorIndex(0);
       setError("");
       setKeyboardStatus({});
       setGameOver(false);
     },
-    [isSharedGame]
+    [isSharedGame, wordLength]
   );
 
-  // Reset the game if settings change (unless we are in a shared game)
+  // Restart game when settings change (and not in shared mode).
   useEffect(() => {
     if (Object.keys(wordList).length > 0 && !isSharedGame) {
       startNewGame(wordList, wordLength);
@@ -75,93 +84,186 @@ const Game = () => {
     isSharedGame,
   ]);
 
-  // Handle on-screen keyboard input
-  const handleKeyPress = (key) => {
-    if (gameOver) return;
-    setError("");
-
-    if (key === "Enter") {
-      if (currentGuess.length === wordLength) {
-        submitGuess();
-      }
-    } else if (key === "Backspace") {
-      setCurrentGuess((prev) => prev.slice(0, -1));
-    } else {
-      if (currentGuess.length < wordLength) {
-        setCurrentGuess((prev) => prev + key.toLowerCase());
-      }
-    }
-  };
-
-  // Submit the current guess
-  const submitGuess = () => {
-    if (currentGuess.length !== wordLength) {
-      setError(`Guess must be ${wordLength} letters long.`);
+  // Wrap submitGuess in useCallback.
+  const submitGuess = useCallback(() => {
+    // Do not allow submission if any cell is empty or contains a dash.
+    if (currentGuess.some((ch) => ch === "" || ch === "-")) {
+      setError("Cannot submit: please fill every cell without dashes.");
       return;
     }
-    if (!isValidWord(currentGuess, wordList)) {
+    const guessStr = currentGuess.join("");
+    if (!isValidWord(guessStr, wordList)) {
       setError("Not a valid word.");
       return;
     }
-
-    const feedback = getFeedback(currentGuess, targetWord);
-    updateKeyboardStatus(currentGuess, feedback);
-
-    const newGuess = { word: currentGuess, feedback };
+    const feedback = getFeedback(guessStr, targetWord);
+    updateKeyboardStatus(guessStr, feedback);
+    const newGuess = { word: guessStr, feedback };
     const newGuesses = [...guesses, newGuess];
     setGuesses(newGuesses);
-    setCurrentGuess("");
+    setCurrentGuess(Array(wordLength).fill(""));
+    setCursorIndex(0);
 
-    // Check if correct or out of attempts
-    if (currentGuess === targetWord) {
+    if (guessStr === targetWord) {
       setGameOver(true);
     } else if (!infiniteMode && newGuesses.length >= maxAttempts) {
       setGameOver(true);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    currentGuess,
+    wordList,
+    targetWord,
+    guesses,
+    infiniteMode,
+    maxAttempts,
+    wordLength,
+  ]);
 
-  // Update keyboard letters based on feedback
-  const updateKeyboardStatus = (guess, feedback) => {
-    const newStatus = { ...keyboardStatus };
-    for (let i = 0; i < guess.length; i++) {
-      const letter = guess[i].toUpperCase();
-      const status = feedback[i];
-      // Priority: correct > present > absent
-      if (newStatus[letter] === "correct") continue;
-      if (newStatus[letter] === "present" && status === "absent") continue;
-      newStatus[letter] = status;
-    }
-    setKeyboardStatus(newStatus);
-  };
+  // Wrap updateKeyboardStatus in useCallback using a functional update.
+  const updateKeyboardStatus = useCallback((guess, feedback) => {
+    setKeyboardStatus((prevStatus) => {
+      let newStatus = { ...prevStatus };
+      for (let i = 0; i < guess.length; i++) {
+        const letter = guess[i].toUpperCase();
+        const status = feedback[i];
+        if (newStatus[letter] === "correct") continue;
+        if (newStatus[letter] === "present" && status === "absent") continue;
+        newStatus[letter] = status;
+      }
+      return newStatus;
+    });
+  }, []);
 
-  // Generate a share code
+  // Wrap handleKeyPress in useCallback.
+  const handleKeyPress = useCallback(
+    (key) => {
+      if (gameOver) return;
+      setError("");
+
+      // Navigation: Arrow keys.
+      if (key === "ArrowLeft") {
+        if (cursorIndex > 0) setCursorIndex(cursorIndex - 1);
+        return;
+      }
+      if (key === "ArrowRight") {
+        if (cursorIndex < wordLength - 1) setCursorIndex(cursorIndex + 1);
+        return;
+      }
+
+      // Enter: submit only if all cells are filled and none has a dash.
+      if (key === "Enter") {
+        if (currentGuess.some((ch) => ch === "" || ch === "-")) {
+          setError(
+            "Please fill every cell (dashes are not allowed) before submitting."
+          );
+          return;
+        }
+        submitGuess();
+        return;
+      }
+
+      // Backspace / Delete: clear current cell or move left.
+      if (key === "Backspace" || key === "Delete") {
+        const newGuess = [...currentGuess];
+        if (newGuess[cursorIndex] !== "") {
+          newGuess[cursorIndex] = "";
+          setCurrentGuess(newGuess);
+        } else if (cursorIndex > 0) {
+          const newIndex = cursorIndex - 1;
+          newGuess[newIndex] = "";
+          setCursorIndex(newIndex);
+          setCurrentGuess(newGuess);
+        }
+        return;
+      }
+
+      // Space: instead of inserting an empty space, insert a dash.
+      if (key === "Space" || key === " ") {
+        const newGuess = [...currentGuess];
+        newGuess[cursorIndex] = "-";
+        setCurrentGuess(newGuess);
+        if (cursorIndex < wordLength - 1) setCursorIndex(cursorIndex + 1);
+        return;
+      }
+
+      // Letter keys: update the cell with the letter.
+      if (/^[a-zA-Z]$/.test(key)) {
+        const newGuess = [...currentGuess];
+        newGuess[cursorIndex] = key.toLowerCase();
+        setCurrentGuess(newGuess);
+        if (cursorIndex < wordLength - 1) setCursorIndex(cursorIndex + 1);
+        return;
+      }
+    },
+    [gameOver, currentGuess, cursorIndex, wordLength, submitGuess]
+  );
+
+  // Listen for physical keyboard events.
+  useEffect(() => {
+    const handlePhysicalKeyDown = (event) => {
+      const allowedKeys = [
+        "Enter",
+        "Backspace",
+        "Delete",
+        "ArrowLeft",
+        "ArrowRight",
+        "Space",
+        " ",
+      ];
+      if (/^[a-zA-Z]$/.test(event.key)) {
+        handleKeyPress(event.key);
+      } else if (allowedKeys.includes(event.key)) {
+        if (event.key === "Delete") {
+          handleKeyPress("Backspace");
+        } else if (event.key === " " || event.key === "Space") {
+          handleKeyPress("Space");
+        } else {
+          handleKeyPress(event.key);
+        }
+      } else {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("keydown", handlePhysicalKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handlePhysicalKeyDown);
+    };
+  }, [handleKeyPress]);
+
   const handleShare = () => {
     const encoded = encodeWord(targetWord);
     alert(`Share this code with your friends: ${encoded}`);
   };
 
-  // Load a shared word from a code
   const handleLoadShare = () => {
     const decoded = decodeWord(shareCode);
-    if (decoded) {
+    if (decoded && isValidWord(decoded, wordList)) {
       setWordLength(decoded.length);
       setTargetWord(decoded);
       setGuesses([]);
-      setCurrentGuess("");
+      setCurrentGuess(Array(decoded.length).fill(""));
+      setCursorIndex(0);
       setError("");
       setKeyboardStatus({});
       setGameOver(false);
       setIsSharedGame(true);
     } else {
-      setError("Invalid share code.");
+      setError("Invalid share code. Please enter a valid encoded word.");
     }
     setShareCode("");
   };
 
-  // Cancel shared mode and start fresh
   const handleNewGame = () => {
     setIsSharedGame(false);
     startNewGame(wordList, wordLength);
+  };
+
+  const handleCellClick = (colIndex) => {
+    if (!gameOver) {
+      setCursorIndex(colIndex);
+    }
   };
 
   return (
@@ -170,7 +272,6 @@ const Game = () => {
         Wordle-like Game
       </h1>
 
-      {/* Settings */}
       <Settings
         wordLength={wordLength}
         setWordLength={setWordLength}
@@ -180,7 +281,6 @@ const Game = () => {
         setInfiniteMode={setInfiniteMode}
       />
 
-      {/* Share code input */}
       <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
         <input
           type="text"
@@ -197,21 +297,20 @@ const Game = () => {
         </button>
       </div>
 
-      {/* Game Grid */}
       <Grid
         guesses={guesses}
         wordLength={wordLength}
         maxAttempts={infiniteMode ? guesses.length + 1 : maxAttempts}
         currentGuess={currentGuess}
         gameOver={gameOver}
+        cursorIndex={cursorIndex}
+        onCellClick={handleCellClick}
       />
 
-      {/* Error Message */}
       {error && (
         <p className="text-red-500 text-center mb-2 font-medium">{error}</p>
       )}
 
-      {/* Win / Loss Message */}
       {gameOver && (
         <div className="text-center my-4">
           {guesses[guesses.length - 1]?.word === targetWord ? (
@@ -226,7 +325,6 @@ const Game = () => {
         </div>
       )}
 
-      {/* Share & New Game Buttons */}
       <div className="flex justify-center gap-3 mb-4">
         <button
           onClick={handleShare}
@@ -242,11 +340,10 @@ const Game = () => {
         </button>
       </div>
 
-      {/* On-screen keyboard */}
       <Keyboard
         keyboardStatus={keyboardStatus}
         onKeyPress={handleKeyPress}
-        isEnterEnabled={currentGuess.length === wordLength}
+        isEnterEnabled={currentGuess.every((ch) => ch !== "")}
       />
     </div>
   );
