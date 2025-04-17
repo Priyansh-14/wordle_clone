@@ -67,10 +67,13 @@ const Grid = ({
                   key={colIndex}
                   onClick={() => isEditable && onCellClick(colIndex)}
                   className={`
-                    flex items-center justify-center border-2 rounded-md font-bold
+                    flex items-center justify-center border border-gray-500 rounded-md font-bold
                     ${getBgColor(status)}
                     ${isSelected ? "ring-2 ring-blue-500" : ""}
-                    w-6 h-6 text-xs sm:w-8 sm:h-8 sm:text-sm md:w-10 md:h-10 md:text-base lg:w-12 lg:h-12 lg:text-lg
+                    w-8 h-8 text-sm
+                    sm:w-10 sm:h-10 sm:text-base
+                    md:w-12 md:h-12 md:text-lg
+                    lg:w-14 lg:h-14 lg:text-xl
                   `}
                 >
                   {letter}

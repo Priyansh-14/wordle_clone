@@ -10,6 +10,7 @@ const Settings = ({
 }) => {
   // Handler for word length dropdown change
   const handleWordLengthChange = (e) => {
+    window.history.replaceState(null, "", window.location.pathname);
     setWordLength(parseInt(e.target.value, 10));
   };
 

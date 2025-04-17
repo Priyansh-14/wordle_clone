@@ -15,9 +15,7 @@ const Keyboard = ({ keyboardStatus, onKeyPress, isEnterEnabled }) => {
     if (key === "Backspace") {
       return "bg-red-500 text-white";
     }
-    if (key === "Space") {
-      return "bg-purple-500 text-white";
-    }
+
     switch (status) {
       case "correct":
         return "bg-green-500 text-white";
@@ -32,7 +30,23 @@ const Keyboard = ({ keyboardStatus, onKeyPress, isEnterEnabled }) => {
 
   const renderKey = (key) => {
     const disabled = key === "Enter" && !isEnterEnabled;
-    const isSpecial = key === "Enter" || key === "Backspace" || key === "Space";
+    const isEnter = key === "Enter";
+    const isBack = key === "Backspace";
+    const isSpace = key === "Space";
+
+    // Choose sizing based on key type
+    let sizeClasses;
+    if (isEnter || isBack) {
+      // Enter & Backspace
+      sizeClasses = "w-16 h-10 sm:w-20 sm:h-12 md:w-24 md:h-14 text-base";
+    } else if (isSpace) {
+      // Extra-wide for Space
+      sizeClasses = "w-32 h-10 sm:w-40 sm:h-12 md:w-48 md:h-14 text-base";
+    } else {
+      // Regular letter keys
+      sizeClasses =
+        "w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 text-sm";
+    }
     return (
       <button
         key={key}
@@ -42,14 +56,10 @@ const Keyboard = ({ keyboardStatus, onKeyPress, isEnterEnabled }) => {
           flex items-center justify-center rounded font-bold transition-opacity
           ${getBgColor(key, keyboardStatus[key] || "")}
           ${disabled ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}
-          ${
-            isSpecial
-              ? "w-16 h-10 text-sm sm:w-20 sm:h-12 sm:text-base md:w-24 md:h-14 md:text-lg px-2"
-              : "w-8 h-8 text-xs sm:w-10 sm:h-10 sm:text-sm md:w-12 md:h-12 md:text-base lg:w-14 lg:h-14 lg:text-lg"
-          }
+          ${sizeClasses}
         `}
       >
-        {key === "Backspace" ? "⌫" : key === "Space" ? "Space" : key}
+        {isBack ? "⌫" : isSpace ? "Space" : key}
       </button>
     );
   };
@@ -57,18 +67,11 @@ const Keyboard = ({ keyboardStatus, onKeyPress, isEnterEnabled }) => {
   return (
     <div className="mt-4 w-full overflow-x-auto">
       <div className="flex flex-col items-center space-y-1">
-        <div className="flex justify-center gap-1 sm:gap-2">
-          {row1.map(renderKey)}
-        </div>
-        <div className="flex justify-center gap-1 sm:gap-2">
-          {row2.map(renderKey)}
-        </div>
-        <div className="flex justify-center gap-1 sm:gap-2">
-          {row3.map(renderKey)}
-        </div>
-        <div className="flex justify-center gap-1 sm:gap-2">
-          {row4.map(renderKey)}
-        </div>
+        {[row1, row2, row3, row4].map((row, idx) => (
+          <div key={idx} className="flex justify-center gap-1 sm:gap-2">
+            {row.map(renderKey)}
+          </div>
+        ))}
       </div>
     </div>
   );

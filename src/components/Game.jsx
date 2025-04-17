@@ -12,139 +12,145 @@ import {
 
 const Game = () => {
   // Game settings
-  const [wordLength, setWordLength] = useState(4);
-  const [maxAttempts, setMaxAttempts] = useState(4);
+  const [wordLength, setWordLength] = useState(5);
+  const [maxAttempts, setMaxAttempts] = useState(5);
   const [infiniteMode, setInfiniteMode] = useState(false);
 
-  // Game state variables
+  // Game state
   const [wordList, setWordList] = useState({});
   const [targetWord, setTargetWord] = useState("");
-  // currentGuess is stored as an array of characters; initially empty.
   const [currentGuess, setCurrentGuess] = useState([]);
-  // cursorIndex determines which cell is selected for editing.
   const [cursorIndex, setCursorIndex] = useState(0);
-  const [guesses, setGuesses] = useState([]); // Completed guesses: { word, feedback }
-  const [error, setError] = useState("");
+  const [guesses, setGuesses] = useState([]);
   const [keyboardStatus, setKeyboardStatus] = useState({});
   const [gameOver, setGameOver] = useState(false);
+  const [error, setError] = useState("");
 
-  // Sharing features
-  const [shareCode, setShareCode] = useState("");
-  const [generatedShareCode, setGeneratedShareCode] = useState("");
+  // Share modal state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [copied, setCopied] = useState(false);
+
   const [isSharedGame, setIsSharedGame] = useState(false);
 
-  // Whenever the wordLength changes, initialize currentGuess array and clear old share code.
+  // On mount: load words & check for ?code=…
   useEffect(() => {
-    setCurrentGuess(Array(wordLength).fill(""));
-    setCursorIndex(0);
-    setGeneratedShareCode("");
-  }, [wordLength]);
-
-  // Load words from words.json on mount.
-  useEffect(() => {
+    // load word list
     fetch(`${import.meta.env.BASE_URL}words.json`)
       .then((res) => res.json())
       .then((data) => {
         setWordList(data);
-        startNewGame(data, wordLength);
+        // after loading, check URL
+        const params = new URLSearchParams(window.location.search);
+        if (params.has("code")) {
+          const decoded = decodeWord(params.get("code"));
+          if (decoded && isValidWord(decoded, data)) {
+            setWordLength(decoded.length);
+            setTargetWord(decoded);
+            setIsSharedGame(true);
+          } else {
+            setError("Invalid share code in URL");
+            startNewGame(data, wordLength);
+          }
+        } else {
+          startNewGame(data, wordLength);
+        }
       })
-      .catch((err) => console.error("Error loading words:", err));
+      .catch((err) => {
+        console.error("Error loading words:", err);
+        startNewGame({}, wordLength);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Define updateKeyboardStatus first so that submitGuess can use it.
-  const updateKeyboardStatus = useCallback((guess, feedback) => {
-    setKeyboardStatus((prevStatus) => {
-      let newStatus = { ...prevStatus };
-      for (let i = 0; i < guess.length; i++) {
-        const letter = guess[i].toUpperCase();
-        const status = feedback[i];
-        if (newStatus[letter] === "correct") continue;
-        if (newStatus[letter] === "present" && status === "absent") continue;
-        newStatus[letter] = status;
-      }
-      return newStatus;
-    });
-  }, []);
-
-  // Start or restart the game.
+  // Start new game
   const startNewGame = useCallback(
     (words, length) => {
-      if (!isSharedGame) {
-        const validWords = Object.keys(words).filter(
-          (w) => w.length === length
-        );
-        const newTarget = getRandomWord(validWords);
-        setTargetWord(newTarget);
+      if (!isSharedGame && Object.keys(words).length) {
+        const valid = Object.keys(words).filter((w) => w.length === length);
+        setTargetWord(getRandomWord(valid));
       }
       setGuesses([]);
-      setCurrentGuess(Array(wordLength).fill(""));
+      setCurrentGuess(Array(length).fill(""));
       setCursorIndex(0);
-      setError("");
       setKeyboardStatus({});
       setGameOver(false);
-      setGeneratedShareCode(""); // Clear any previous generated share code.
+      setError("");
     },
-    [isSharedGame, wordLength]
+    [isSharedGame]
   );
 
-  // Restart game when settings change (and not in shared mode).
+  // Whenever settings change (and not a shared game), restart
   useEffect(() => {
-    if (Object.keys(wordList).length > 0 && !isSharedGame) {
+    if (!isSharedGame && Object.keys(wordList).length) {
       startNewGame(wordList, wordLength);
     }
   }, [
-    wordList,
     wordLength,
     maxAttempts,
     infiniteMode,
-    startNewGame,
     isSharedGame,
+    wordList,
+    startNewGame,
   ]);
 
-  // Wrap submitGuess in useCallback.
-  const submitGuess = useCallback(() => {
-    // Do not allow submission if any cell is empty or contains a dash.
-    if (currentGuess.some((ch) => ch === "" || ch === "-")) {
-      setError("Cannot submit: please fill every cell without dashes.");
-      return;
-    }
-    const guessStr = currentGuess.join("");
-    if (!isValidWord(guessStr, wordList)) {
-      setError("Not a valid word.");
-      return;
-    }
-    const feedback = getFeedback(guessStr, targetWord);
-    updateKeyboardStatus(guessStr, feedback);
-    const newGuess = { word: guessStr, feedback };
-    const newGuesses = [...guesses, newGuess];
-    setGuesses(newGuesses);
+  // Initialize currentGuess on wordLength
+  useEffect(() => {
     setCurrentGuess(Array(wordLength).fill(""));
     setCursorIndex(0);
+  }, [wordLength]);
 
-    if (guessStr === targetWord) {
-      setGameOver(true);
-    } else if (!infiniteMode && newGuesses.length >= maxAttempts) {
-      setGameOver(true);
+  // Update keyboard status
+  const updateKeyboardStatus = useCallback((guess, feedback) => {
+    setKeyboardStatus((prev) => {
+      const next = { ...prev };
+      guess.split("").forEach((ch, i) => {
+        const L = ch.toUpperCase(),
+          s = feedback[i];
+        if (next[L] === "correct") return;
+        if (next[L] === "present" && s === "absent") return;
+        next[L] = s;
+      });
+      return next;
+    });
+  }, []);
+
+  // Submit guess
+  const submitGuess = useCallback(() => {
+    if (currentGuess.some((c) => !c || c === "-")) {
+      setError("Fill every cell (no dashes) before submitting.");
+      return;
     }
+    const str = currentGuess.join("");
+    if (!isValidWord(str, wordList)) {
+      setError("Not valid");
+      return;
+    }
+    const fb = getFeedback(str, targetWord);
+    updateKeyboardStatus(str, fb);
+    const nextGuesses = [...guesses, { word: str, feedback: fb }];
+    setGuesses(nextGuesses);
+    setCurrentGuess(Array(wordLength).fill(""));
+    setCursorIndex(0);
+    if (str === targetWord) setGameOver(true);
+    else if (!infiniteMode && nextGuesses.length >= maxAttempts)
+      setGameOver(true);
   }, [
     currentGuess,
-    wordList,
-    targetWord,
     guesses,
     infiniteMode,
     maxAttempts,
+    targetWord,
+    wordList,
     wordLength,
-    updateKeyboardStatus, // Added missing dependency
+    updateKeyboardStatus,
   ]);
 
-  // Wrap handleKeyPress in useCallback.
+  // Handle key (onscreen + physical)
   const handleKeyPress = useCallback(
     (key) => {
       if (gameOver) return;
       setError("");
-
-      // Navigation: Arrow keys.
       if (key === "ArrowLeft") {
         if (cursorIndex > 0) setCursorIndex(cursorIndex - 1);
         return;
@@ -153,130 +159,97 @@ const Game = () => {
         if (cursorIndex < wordLength - 1) setCursorIndex(cursorIndex + 1);
         return;
       }
-
-      // Enter: submit only if all cells are filled and none has a dash.
       if (key === "Enter") {
-        if (currentGuess.some((ch) => ch === "" || ch === "-")) {
-          setError(
-            "Please fill every cell (dashes are not allowed) before submitting."
-          );
+        if (currentGuess.some((c) => !c || c === "-")) {
+          setError("Fill every cell before submitting.");
           return;
         }
         submitGuess();
         return;
       }
-
-      // Backspace / Delete: clear current cell or move left.
       if (key === "Backspace" || key === "Delete") {
-        const newGuess = [...currentGuess];
-        if (newGuess[cursorIndex] !== "") {
-          newGuess[cursorIndex] = "";
-          setCurrentGuess(newGuess);
+        const g = [...currentGuess];
+        if (g[cursorIndex]) {
+          g[cursorIndex] = "";
+          setCurrentGuess(g);
         } else if (cursorIndex > 0) {
-          const newIndex = cursorIndex - 1;
-          newGuess[newIndex] = "";
-          setCursorIndex(newIndex);
-          setCurrentGuess(newGuess);
+          const ni = cursorIndex - 1;
+          g[ni] = "";
+          setCursorIndex(ni);
+          setCurrentGuess(g);
         }
         return;
       }
-
-      // Space: insert a dash instead of an empty space.
       if (key === "Space" || key === " ") {
-        const newGuess = [...currentGuess];
-        newGuess[cursorIndex] = "-";
-        setCurrentGuess(newGuess);
+        const g = [...currentGuess];
+        g[cursorIndex] = "-";
+        setCurrentGuess(g);
         if (cursorIndex < wordLength - 1) setCursorIndex(cursorIndex + 1);
         return;
       }
-
-      // Letter keys: update the cell with the letter.
       if (/^[a-zA-Z]$/.test(key)) {
-        const newGuess = [...currentGuess];
-        newGuess[cursorIndex] = key.toLowerCase();
-        setCurrentGuess(newGuess);
+        const g = [...currentGuess];
+        g[cursorIndex] = key.toLowerCase();
+        setCurrentGuess(g);
         if (cursorIndex < wordLength - 1) setCursorIndex(cursorIndex + 1);
-        return;
       }
     },
-    [gameOver, currentGuess, cursorIndex, wordLength, submitGuess]
+    [cursorIndex, currentGuess, gameOver, wordLength, submitGuess]
   );
 
-  // Listen for physical keyboard events.
+  // Physical keyboard listener
   useEffect(() => {
-    const handlePhysicalKeyDown = (event) => {
-      const allowedKeys = [
-        "Enter",
-        "Backspace",
-        "Delete",
-        "ArrowLeft",
-        "ArrowRight",
-        "Space",
-        " ",
-      ];
-      if (/^[a-zA-Z]$/.test(event.key)) {
-        handleKeyPress(event.key);
-      } else if (allowedKeys.includes(event.key)) {
-        if (event.key === "Delete") {
-          handleKeyPress("Backspace");
-        } else if (event.key === " " || event.key === "Space") {
-          handleKeyPress("Space");
-        } else {
-          handleKeyPress(event.key);
-        }
-      } else {
-        event.preventDefault();
+    const onDown = (e) => {
+      const k = e.key;
+      if (
+        /^[a-zA-Z]$/.test(k) ||
+        [
+          "Enter",
+          "Backspace",
+          "Delete",
+          "ArrowLeft",
+          "ArrowRight",
+          "Space",
+          " ",
+        ].includes(k)
+      ) {
+        e.preventDefault();
+        handleKeyPress(k === " " ? "Space" : k);
       }
     };
-
-    window.addEventListener("keydown", handlePhysicalKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handlePhysicalKeyDown);
-    };
+    window.addEventListener("keydown", onDown);
+    return () => window.removeEventListener("keydown", onDown);
   }, [handleKeyPress]);
 
-  // Generate share code and display it in a copyable field.
-  const handleShare = () => {
+  // Share URL modal
+  const onShare = () => {
     const code = encodeWord(targetWord);
-    setGeneratedShareCode(code);
+    const url = `${window.location.origin}${window.location.pathname}?code=${code}`;
+    setShareUrl(url);
+    setCopied(false);
+    setShowShareModal(true);
+  };
+  const onCopy = () => {
+    navigator.clipboard.writeText(shareUrl).then(() => setCopied(true));
   };
 
-  // Copy the share code to the clipboard.
-  const copyShareCode = () => {
-    navigator.clipboard.writeText(generatedShareCode);
-  };
-
-  const handleLoadShare = () => {
-    const decoded = decodeWord(shareCode);
-    if (decoded && isValidWord(decoded, wordList)) {
-      setWordLength(decoded.length);
-      setTargetWord(decoded);
-      setGuesses([]);
-      setCurrentGuess(Array(decoded.length).fill(""));
-      setCursorIndex(0);
-      setError("");
-      setKeyboardStatus({});
-      setGameOver(false);
-      setIsSharedGame(true);
-    } else {
-      setError("Invalid share code. Please enter a valid encoded word.");
-    }
-    setShareCode("");
-  };
-
-  const handleNewGame = () => {
-    setIsSharedGame(false);
-    startNewGame(wordList, wordLength);
-  };
-
-  const handleCellClick = (colIndex) => {
-    if (!gameOver) {
-      setCursorIndex(colIndex);
-    }
-  };
-
+  // New Game at top
   return (
-    <div className="w-full bg-white rounded-xl shadow-lg p-4 sm:p-6">
+    <div className="w-full bg-white rounded-xl shadow-lg p-4 sm:p-6 relative">
+      {/* New Game button */}
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={() => {
+            setIsSharedGame(false);
+            window.history.replaceState(null, "", window.location.pathname);
+            startNewGame(wordList, wordLength);
+          }}
+          className="px-4 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          New Game
+        </button>
+      </div>
+
       <h1 className="text-3xl font-extrabold text-center mb-6 text-gray-800">
         Wordle
       </h1>
@@ -290,39 +263,55 @@ const Game = () => {
         setInfiniteMode={setInfiniteMode}
       />
 
-      <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
-        <input
-          type="text"
-          value={shareCode}
-          onChange={(e) => setShareCode(e.target.value)}
-          className="border border-gray-300 p-2 rounded w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-purple-400"
-          placeholder="Enter share code"
-        />
-        <button
-          onClick={handleLoadShare}
-          className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
-        >
-          Load Word
-        </button>
-      </div>
-
-      {generatedShareCode && (
-        <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
-          <input
-            type="text"
-            value={generatedShareCode}
-            readOnly
-            className="border border-gray-300 p-2 rounded w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-purple-400"
-          />
+      {/* Share button only after game over */}
+      {gameOver && (
+        <div className="flex justify-center mb-4">
           <button
-            onClick={copyShareCode}
-            className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-colors"
+            onClick={onShare}
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
           >
-            Copy
+            Share
           </button>
         </div>
       )}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-11/12 max-w-md p-6">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+              Share this Game
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Copy the link below to invite your friends to play:
+            </p>
+            <div className="flex">
+              <input
+                type="text"
+                readOnly
+                value={shareUrl}
+                className="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <button
+                onClick={onCopy}
+                className={`px-4 py-2 rounded-r-lg text-white font-medium transition ${
+                  copied
+                    ? "bg-green-500 hover:bg-green-600"
+                    : "bg-blue-500 hover:bg-blue-600"
+                }`}
+              >
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+            <button
+              onClick={() => setShowShareModal(false)}
+              className="mt-5 w-full text-center text-sm text-gray-500 hover:text-gray-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
+      {/* Game grid */}
       <Grid
         guesses={guesses}
         wordLength={wordLength}
@@ -330,46 +319,30 @@ const Game = () => {
         currentGuess={currentGuess}
         gameOver={gameOver}
         cursorIndex={cursorIndex}
-        onCellClick={handleCellClick}
+        onCellClick={(ci) => !gameOver && setCursorIndex(ci)}
       />
 
-      {error && (
-        <p className="text-red-500 text-center mb-2 font-medium">{error}</p>
-      )}
+      {error && <p className="text-red-500 text-center mb-2">{error}</p>}
 
       {gameOver && (
         <div className="text-center my-4">
-          {guesses[guesses.length - 1]?.word === targetWord ? (
+          {guesses[guesses.length - 1].word === targetWord ? (
             <p className="text-green-600 font-bold">
-              Congratulations! You've guessed the word!
+              Congratulations! You’ve guessed it!
             </p>
           ) : (
             <p className="text-red-600 font-bold">
-              Game Over! The word was: {targetWord.toUpperCase()}
+              Game Over! It was: {targetWord.toUpperCase()}
             </p>
           )}
         </div>
       )}
 
-      <div className="flex justify-center gap-3 mb-4">
-        <button
-          onClick={handleShare}
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-        >
-          Share
-        </button>
-        <button
-          onClick={handleNewGame}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-        >
-          New Game
-        </button>
-      </div>
-
+      {/* On-screen keyboard */}
       <Keyboard
         keyboardStatus={keyboardStatus}
         onKeyPress={handleKeyPress}
-        isEnterEnabled={currentGuess.every((ch) => ch !== "")}
+        isEnterEnabled={currentGuess.every((c) => c)}
       />
     </div>
   );
