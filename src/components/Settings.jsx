@@ -13,69 +13,57 @@ const Settings = ({
     setWordLength(parseInt(e.target.value, 10));
   };
 
-  // Handler for max attempts dropdown change
+  // Handler for max attempts dropdown change (including infinite as the last option)
   const handleMaxAttemptsChange = (e) => {
-    setMaxAttempts(parseInt(e.target.value, 10));
-  };
-
-  // Toggle infinite mode
-  const handleInfiniteToggle = () => {
-    setInfiniteMode(!infiniteMode);
+    const val = e.target.value;
+    if (val === "∞") {
+      setInfiniteMode(true);
+      setMaxAttempts(null);
+    } else {
+      setInfiniteMode(false);
+      setMaxAttempts(parseInt(val, 10));
+    }
   };
 
   // Generate options for word length (3 to 10)
-  const wordLengthOptions = [];
-  for (let i = 3; i <= 10; i++) {
-    wordLengthOptions.push(i);
-  }
+  const wordLengthOptions = Array.from({ length: 8 }, (_, i) => i + 3);
 
-  // Generate options for max attempts (1 to 10)
-  const maxAttemptsOptions = [];
-  for (let i = 1; i <= 10; i++) {
-    maxAttemptsOptions.push(i);
-  }
+  // Generate options for max attempts (5 to 10), plus infinite
+  const maxAttemptsOptions = Array.from({ length: 6 }, (_, i) => i + 5);
+  maxAttemptsOptions.push("∞");
 
   return (
     <div className="mb-4 border border-gray-200 rounded-lg p-3 bg-gray-50 w-full">
-      <h2 className="font-bold mb-2 text-gray-700">Settings</h2>
-      <div className="flex flex-col gap-3">
-        <label className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
+        <label className="flex-1 flex items-center justify-between">
           <span className="text-gray-700">Word Length:</span>
           <select
             value={wordLength}
             onChange={handleWordLengthChange}
             className="border border-gray-300 rounded p-1 w-16 text-center focus:outline-none focus:ring-2 focus:ring-blue-300"
           >
-            {wordLengthOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
+            {wordLengthOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
               </option>
             ))}
           </select>
         </label>
-        <label className="flex items-center justify-between">
+        {/* Divider */}
+        <div className="border-l border-gray-300 h-6" />
+        <label className="flex-1 flex items-center justify-between">
           <span className="text-gray-700">Max Attempts:</span>
           <select
-            value={maxAttempts}
+            value={infiniteMode ? "∞" : maxAttempts}
             onChange={handleMaxAttemptsChange}
-            disabled={infiniteMode}
-            className="border border-gray-300 rounded p-1 w-16 text-center focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50"
+            className="border border-gray-300 rounded p-1 w-16 text-center focus:outline-none focus:ring-2 focus:ring-blue-300"
           >
-            {maxAttemptsOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
+            {maxAttemptsOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
               </option>
             ))}
           </select>
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={infiniteMode}
-            onChange={handleInfiniteToggle}
-            className="form-checkbox h-5 w-5 text-blue-600"
-          />
-          <span className="text-gray-700">Infinite Mode</span>
         </label>
       </div>
     </div>
