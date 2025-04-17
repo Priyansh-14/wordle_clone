@@ -236,8 +236,11 @@ const Game = () => {
   // New Game at top
   return (
     <div className="w-full bg-white rounded-xl shadow-lg p-4 sm:p-6 relative">
-      {/* New Game button */}
-      <div className="flex justify-end mb-2">
+      <h1 className="text-3xl font-extrabold text-center mb-4 text-gray-800">
+        Wordle
+      </h1>
+
+      <div className="flex justify-center mb-4">
         <button
           onClick={() => {
             setIsSharedGame(false);
@@ -249,10 +252,6 @@ const Game = () => {
           New Game
         </button>
       </div>
-
-      <h1 className="text-3xl font-extrabold text-center mb-6 text-gray-800">
-        Wordle
-      </h1>
 
       <Settings
         wordLength={wordLength}
