@@ -36,7 +36,8 @@ const Game = () => {
   // On mount: load words & check for ?code=…
   useEffect(() => {
     // load word list
-    fetch(`${import.meta.env.BASE_URL}words.json`)
+    // fetch(`${import.meta.env.BASE_URL}words.json`)
+    fetch(`${import.meta.env.BASE_URL}dictionary.json`)
       .then((res) => res.json())
       .then((data) => {
         setWordList(data);
@@ -326,13 +327,23 @@ const Game = () => {
       {gameOver && (
         <div className="text-center my-4">
           {guesses[guesses.length - 1].word === targetWord ? (
-            <p className="text-green-600 font-bold">
-              Congratulations! You’ve guessed it!
-            </p>
+            <>
+              <p className="text-green-600 font-bold">
+                Congratulations! You’ve guessed it!
+              </p>
+              <p className="mt-2 text-gray-800">
+                {targetWord.toUpperCase()} : {wordList[targetWord]}
+              </p>
+            </>
           ) : (
-            <p className="text-red-600 font-bold">
-              Game Over! It was: {targetWord.toUpperCase()}
-            </p>
+            <>
+              <p className="text-red-600 font-bold">
+                Game Over! It was: {targetWord.toUpperCase()}
+              </p>
+              <p className="mt-2 text-gray-800">
+                {targetWord.toUpperCase()} : {wordList[targetWord]}
+              </p>
+            </>
           )}
         </div>
       )}
