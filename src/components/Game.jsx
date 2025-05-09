@@ -263,6 +263,43 @@ const Game = () => {
         setInfiniteMode={setInfiniteMode}
       />
 
+      {/* Game grid */}
+      <Grid
+        guesses={guesses}
+        wordLength={wordLength}
+        maxAttempts={infiniteMode ? guesses.length + 1 : maxAttempts}
+        currentGuess={currentGuess}
+        gameOver={gameOver}
+        cursorIndex={cursorIndex}
+        onCellClick={(ci) => !gameOver && setCursorIndex(ci)}
+      />
+
+      {error && <p className="text-red-500 text-center mb-2">{error}</p>}
+
+      {gameOver && (
+        <div className="text-center my-4">
+          {guesses[guesses.length - 1].word === targetWord ? (
+            <>
+              <p className="text-green-600 font-bold">
+                Congratulations! You’ve guessed it!
+              </p>
+              <p className="mt-2 text-gray-800">
+                {targetWord.toUpperCase()} : {wordList[targetWord]}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-red-600 font-bold">
+                Game Over! It was: {targetWord.toUpperCase()}
+              </p>
+              <p className="mt-2 text-gray-800">
+                {targetWord.toUpperCase()} : {wordList[targetWord]}
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Share button only after game over */}
       {gameOver && (
         <div className="flex justify-center mb-4">
@@ -308,43 +345,6 @@ const Game = () => {
               Close
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Game grid */}
-      <Grid
-        guesses={guesses}
-        wordLength={wordLength}
-        maxAttempts={infiniteMode ? guesses.length + 1 : maxAttempts}
-        currentGuess={currentGuess}
-        gameOver={gameOver}
-        cursorIndex={cursorIndex}
-        onCellClick={(ci) => !gameOver && setCursorIndex(ci)}
-      />
-
-      {error && <p className="text-red-500 text-center mb-2">{error}</p>}
-
-      {gameOver && (
-        <div className="text-center my-4">
-          {guesses[guesses.length - 1].word === targetWord ? (
-            <>
-              <p className="text-green-600 font-bold">
-                Congratulations! You’ve guessed it!
-              </p>
-              <p className="mt-2 text-gray-800">
-                {targetWord.toUpperCase()} : {wordList[targetWord]}
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-red-600 font-bold">
-                Game Over! It was: {targetWord.toUpperCase()}
-              </p>
-              <p className="mt-2 text-gray-800">
-                {targetWord.toUpperCase()} : {wordList[targetWord]}
-              </p>
-            </>
-          )}
         </div>
       )}
 
