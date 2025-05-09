@@ -43,7 +43,7 @@ const Grid = ({
       case "absent":
         return "bg-gray-400 text-white";
       default:
-        return "bg-gray-200 text-gray-900";
+        return "bg-white text-gray-900";
     }
   };
 
@@ -108,9 +108,10 @@ const Grid = ({
                 onClick={() => isEditable && onCellClick(colIndex)}
                 className={`
                   aspect-square flex items-center justify-center
-                  border border-gray-500 rounded-md font-bold
+                  border-2  border-black rounded-md font-bold
                   ${getBgColor(status)}
-                  ${isSelected ? "ring-2 ring-blue-500" : ""}
+                 
+                  ${isSelected ? "border-2 border-dashed" : ""}
                 `}
               >
                 {letter}
