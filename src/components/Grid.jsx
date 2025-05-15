@@ -85,7 +85,7 @@ const Grid = ({
     //   </div>
     // </div>
     // outer wrapper: full-width on small, caps at md/lg on larger screens
-    <div className="w-full max-w-[80vw] md:max-w-sm lg:max-w-md mx-auto px-2 sm:px-0 my-4">
+    <div className="w-full max-w-[80vw] sm:max-w-sm md:max-w-md lg:max-w-lg mx-auto px-2 sm:px-0 my-4">
       {rows.map((row, rowIndex) => (
         // each row is a CSS grid with `wordLength` equal columns
         <div
